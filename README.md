@@ -7,6 +7,7 @@ A GitHub Action that builds your Docusaurus site and syncs it to an Amazon S3 bu
 - ✅ Installs dependencies with Yarn
 - ✅ Builds your Docusaurus site
 - ✅ Syncs build output to S3 with `--exact-timestamps` and `--delete`
+- ✅ Automatically invalidates CloudFront cache (optional)
 - ✅ Works with both Docusaurus v2 and v3
 - ✅ Supports custom build directories
 
@@ -48,35 +49,52 @@ jobs:
         with:
           aws-region: 'us-west-2'
           aws-s3-bucket: ${{ secrets.AWS_S3_BUCKET }}
+          cloudfront-distribution-id: ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}
+```
+
+### Example without CloudFront
+
+If you don't use CloudFront, simply omit the `cloudfront-distribution-id` input:
+
+```yaml
+- name: Build and Deploy to S3
+  uses: docuactions/aws-s3@main
+  with:
+    aws-region: us-east-1
+    aws-s3-bucket: ${{ secrets.AWS_S3_BUCKET }}
 ```
 
 ## Configuration
 
 ### Inputs
 
-| Input           | Description                                      | Required | Default   |
-|-----------------|--------------------------------------------------|----------|-----------|
-| `aws-region`    | AWS region where your S3 bucket is located       | Yes      | -         |
-| `aws-s3-bucket` | Name of the S3 bucket to deploy to               | Yes      | -         |
-| `build-dir`     | Build output directory (relative to source-dir)  | No       | `build`   |
-| `source-dir`    | Source directory containing your Docusaurus site | No       | `.`       |
+| Input                        | Description                                      | Required | Default   |
+|------------------------------|--------------------------------------------------|----------|-----------|
+| `aws-region`                 | AWS region where your S3 bucket is located       | Yes      | -         |
+| `aws-s3-bucket`              | Name of the S3 bucket to deploy to               | Yes      | -         |
+| `cloudfront-distribution-id` | CloudFront distribution ID to invalidate         | No       | -         |
+| `build-dir`                  | Build output directory (relative to source-dir)  | No       | `build`   |
+| `source-dir`                 | Source directory containing your Docusaurus site | No       | `.`       |
 
 ### Required Secrets
 
 You must configure these as [encrypted secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets) in your repository:
 
-| Secret                    | Description                                                                                                  |
-|---------------------------|--------------------------------------------------------------------------------------------------------------|
-| `AWS_ACCESS_KEY_ID`       | Your AWS Access Key. [More info here.](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html) |
-| `AWS_SECRET_ACCESS_KEY`   | Your AWS Secret Access Key. [More info here.](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html) |
-| `AWS_S3_BUCKET`           | Your S3 bucket name (can also be passed directly as input if you prefer) |
+| Secret                        | Description                                                                                                  | Required |
+|-------------------------------|--------------------------------------------------------------------------------------------------------------|----------|
+| `AWS_ACCESS_KEY_ID`           | Your AWS Access Key. [More info here.](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html) | Yes |
+| `AWS_SECRET_ACCESS_KEY`       | Your AWS Secret Access Key. [More info here.](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html) | Yes |
+| `AWS_S3_BUCKET`               | Your S3 bucket name (can also be passed directly as input if you prefer) | Yes |
+| `CLOUDFRONT_DISTRIBUTION_ID`  | Your CloudFront distribution ID (e.g., `E1234567890ABC`) | No |
 
 ### Prerequisites
 
 1. **Node.js**: Use `actions/setup-node@v4` to set up Node.js (v18+ for Docusaurus v3)
 2. **AWS Credentials**: Use `aws-actions/configure-aws-credentials` to configure AWS access
 3. **S3 Bucket**: Your bucket should be configured for static website hosting
-4. **IAM Permissions**: Your AWS user needs `s3:PutObject`, `s3:DeleteObject`, and `s3:ListBucket` permissions
+4. **IAM Permissions**: Your AWS user needs the following permissions:
+   - **S3**: `s3:PutObject`, `s3:DeleteObject`, and `s3:ListBucket`
+   - **CloudFront** (if using): `cloudfront:CreateInvalidation` and `cloudfront:GetInvalidation`
 
 ## Credits
 * [Brock Davis](https://github.com/brockneedscoffee)

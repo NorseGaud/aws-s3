@@ -9,6 +9,10 @@ inputs:
   aws-s3-bucket:
     description: 'S3 bucket name to sync to'
     required: true
+  cloudfront-distribution-id:
+    description: 'CloudFront distribution ID to invalidate (optional)'
+    required: false
+    default: ''
   build-dir:
     description: 'Build output directory'
     required: false
@@ -46,7 +50,20 @@ runs:
           --exact-timestamps \
           --delete \
           --region ${{ inputs.aws-region }}
-        echo "Deployment complete!"
+        echo "S3 sync complete!"
+
+    - name: Invalidate CloudFront cache
+      if: ${{ inputs.cloudfront-distribution-id != '' }}
+      shell: bash
+      run: |
+        echo "Creating CloudFront invalidation for distribution ${{ inputs.cloudfront-distribution-id }}..."
+        INVALIDATION_ID=$(aws cloudfront create-invalidation \
+          --distribution-id ${{ inputs.cloudfront-distribution-id }} \
+          --paths "/*" \
+          --query 'Invalidation.Id' \
+          --output text)
+        echo "CloudFront invalidation created: $INVALIDATION_ID"
+        echo "Cache invalidation in progress. This may take a few minutes to complete."
 
 branding:
   icon: refresh-cw
