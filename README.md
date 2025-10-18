@@ -1,39 +1,82 @@
 # 🦖 Deploy Docusaurus to AWS S3 (Amazon Web Services S3)
-This serves as a modified version of the s3-sync-action that syncs a directory with a remote S3 bucket using the standard [AWS CLI](https://docs.aws.amazon.com/cli/). The directory can come from your repository or be created as part of your process. Additionally, it executes the yarn run build command to prepare the docusaurs site for deployment.
+
+A GitHub Action that builds your Docusaurus site and syncs it to an Amazon S3 bucket. This action handles the complete deployment process: installing dependencies, building the site, and uploading to S3.
+
+## Features
+
+- ✅ Installs dependencies with Yarn
+- ✅ Builds your Docusaurus site
+- ✅ Syncs build output to S3 with `--exact-timestamps` and `--delete`
+- ✅ Works with both Docusaurus v2 and v3
+- ✅ Supports custom build directories
 
 ## Usage
 
-### `main.yml` Example
+### `workflow.yml` Example
 
-Place in a `.yml` file such as this one in your `.github/workflows` folder. [Refer to the documentation on workflow YAML syntax here.](https://help.github.com/en/articles/workflow-syntax-for-github-actions)
+Place this in `.github/workflows/deploy.yml` in your repository. [Refer to the documentation on workflow YAML syntax here.](https://help.github.com/en/articles/workflow-syntax-for-github-actions)
 
 ```yaml
-name: 🦖 Deploy Docusaurus to AWS
-on: [push]
+name: 🦖 Deploy Docusaurus to AWS S3
+on:
+  push:
+    branches:
+      - main
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@master
-      - uses: docuactions/aws-s3@master
-        env:
-          AWS_DEFAULT_REGION: "us-east-1"
-          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: yarn
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
+
+      - name: Deploy to S3
+        uses: docuactions/aws-s3@main
+        with:
+          aws-region: us-east-1
+          aws-s3-bucket: ${{ secrets.AWS_S3_BUCKET }}
 ```
 
 ## Configuration
 
-The following settings must be passed as environment variables as shown in the example. Sensitive information, especially `AWS_ACCESS_KEY_ID` and `AWS_SECRET_ACCESS_KEY`, should be [set as encrypted secrets](https://help.github.com/en/articles/virtual-environments-for-github-actions#creating-and-using-secrets-encrypted-variables) — otherwise, they'll be public to anyone browsing your repository's source code and CI logs.
+### Inputs
 
-| Key                   | Value                                                                                                                                                                                               | Suggested Type        | Required | Notes                                                                    |
-|-----------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------|----------|--------------------------------------------------------------------------|
-| AWS_DEFAULT_REGION    | The region where you created your bucket. Set to [Full list of regions here.](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/using-regions-availability-zones.html#concepts-available-regions) | `env`                 | Yes      |                                                                          |
-| AWS_S3_BUCKET         | The bucket name you want to publish the site to                                                                                                                                                     | `env` or `secret env` | Yes      | This does not have to be in the secrets but it makes it easier to manage |
-| AWS_ACCESS_KEY_ID     | Your AWS Access Key. [More info here.](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html)                                                                                 | `secret env`          | Yes      |                                                                          |
-| AWS_SECRET_ACCESS_KEY | Your AWS Secret Access Key. [More info here.](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html)                                                                          | `secret env`          | Yes      |                                                                          |
+| Input           | Description                                      | Required | Default   |
+|-----------------|--------------------------------------------------|----------|-----------|
+| `aws-region`    | AWS region where your S3 bucket is located       | Yes      | -         |
+| `aws-s3-bucket` | Name of the S3 bucket to deploy to               | Yes      | -         |
+| `build-dir`     | Build output directory (relative to source-dir)  | No       | `build`   |
+| `source-dir`    | Source directory containing your Docusaurus site | No       | `.`       |
+
+### Required Secrets
+
+You must configure these as [encrypted secrets](https://docs.github.com/en/actions/security-guides/encrypted-secrets) in your repository:
+
+| Secret                    | Description                                                                                                  |
+|---------------------------|--------------------------------------------------------------------------------------------------------------|
+| `AWS_ACCESS_KEY_ID`       | Your AWS Access Key. [More info here.](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html) |
+| `AWS_SECRET_ACCESS_KEY`   | Your AWS Secret Access Key. [More info here.](https://docs.aws.amazon.com/general/latest/gr/managing-aws-access-keys.html) |
+| `AWS_S3_BUCKET`           | Your S3 bucket name (can also be passed directly as input if you prefer) |
+
+### Prerequisites
+
+1. **Node.js**: Use `actions/setup-node@v4` to set up Node.js (v18+ for Docusaurus v3)
+2. **AWS Credentials**: Use `aws-actions/configure-aws-credentials` to configure AWS access
+3. **S3 Bucket**: Your bucket should be configured for static website hosting
+4. **IAM Permissions**: Your AWS user needs `s3:PutObject`, `s3:DeleteObject`, and `s3:ListBucket` permissions
 
 ## Credits
 * [Brock Davis](https://github.com/brockneedscoffee)

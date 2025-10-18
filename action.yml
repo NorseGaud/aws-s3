@@ -1,9 +1,53 @@
 name: "Deploy Docusaurus to AWS S3"
-description: "Builds and syncs Docusaurus v2 site to Amazon S3 bucket"
+description: "Builds and syncs Docusaurus site to Amazon S3 bucket"
 author: docuactions
+
+inputs:
+  aws-region:
+    description: 'AWS Region for S3 bucket'
+    required: true
+  aws-s3-bucket:
+    description: 'S3 bucket name to sync to'
+    required: true
+  build-dir:
+    description: 'Build output directory'
+    required: false
+    default: 'build'
+  source-dir:
+    description: 'Source directory (defaults to workspace root)'
+    required: false
+    default: '.'
+
 runs:
-  using: docker
-  image: Dockerfile
+  using: composite
+  steps:
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ inputs.source-dir }}
+      run: |
+        echo "Installing yarn globally..."
+        npm install -g yarn
+        echo "Installing dependencies..."
+        yarn install
+
+    - name: Build Docusaurus site
+      shell: bash
+      working-directory: ${{ inputs.source-dir }}
+      run: |
+        echo "Building Docusaurus site..."
+        yarn run build
+
+    - name: Sync to S3
+      shell: bash
+      working-directory: ${{ inputs.source-dir }}
+      run: |
+        echo "Syncing ${{ inputs.build-dir }} to s3://${{ inputs.aws-s3-bucket }}..."
+        aws s3 sync ./${{ inputs.build-dir }} s3://${{ inputs.aws-s3-bucket }} \
+          --exact-timestamps \
+          --delete \
+          --region ${{ inputs.aws-region }}
+        echo "Deployment complete!"
+
 branding:
   icon: refresh-cw
   color: green
