@@ -43,10 +43,10 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: us-east-1
 
-      - name: Deploy to S3
+      - name: Build and Deploy to S3
         uses: docuactions/aws-s3@main
         with:
-          aws-region: us-east-1
+          aws-region: 'us-west-2'
           aws-s3-bucket: ${{ secrets.AWS_S3_BUCKET }}
 ```
 
