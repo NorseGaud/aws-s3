@@ -72,7 +72,7 @@ If you don't use CloudFront, simply omit the `cloudfront-distribution-id` input:
 |------------------------------|--------------------------------------------------|----------|-----------|
 | `aws-region`                 | AWS region where your S3 bucket is located       | Yes      | -         |
 | `aws-s3-bucket`              | Name of the S3 bucket to deploy to               | Yes      | -         |
-| `cloudfront-distribution-id` | CloudFront distribution ID to invalidate         | No       | -         |
+| `cloudfront-distribution-id` | CloudFront distribution ID to invalidate (requires cloudfront:CreateInvalidation permission)         | No       | -         |
 | `build-dir`                  | Build output directory (relative to source-dir)  | No       | `build`   |
 | `source-dir`                 | Source directory containing your Docusaurus site | No       | `.`       |
 
